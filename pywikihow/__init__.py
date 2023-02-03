@@ -157,10 +157,7 @@ class HowTo:
                 if html.sup:
                     for sup in html.find_all("sup"):
                         sup.decompose()
-                try:
-                    summary = html.find("b").text
-                except:
-                    breakpoint()
+                summary = html.find("b").text
 
                 for _extra_div in html.find("b").find_all("div"):
                     summary = summary.replace(_extra_div.text, "")
