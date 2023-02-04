@@ -1,3 +1,4 @@
+import re
 import bs4
 from pywikihow.exceptions import ParseError, UnsupportedLanguage
 from datetime import timedelta
@@ -16,11 +17,13 @@ def get_html(url):
 
 
 class HowToStep:
-    def __init__(self, number, summary=None, description=None, picture=None):
+    def __init__(self, number, summary=None, description=None, picture=None, part=None, title=None):
         self._number = number
         self._summary = summary
         self._description = description
         self._picture = picture
+        self._part = part
+        self._title = title
 
     @property
     def number(self):
@@ -38,11 +41,21 @@ class HowToStep:
     def picture(self):
         return self._picture
 
+    @property
+    def part(self):
+        return self._part
+
+    @property
+    def title(self):
+        return self._title
+
     def as_dict(self):
         return {"number": self.number,
                 "summary": self.summary,
                 "description": self.description,
-                "picture": self.picture}
+                "picture": self.picture,
+                "part": self.part,
+                "title": self.title}
 
     def print(self, extended=False):
         print(self.number, "-", self.summary)
@@ -110,7 +123,7 @@ class HowTo:
 
     def _parse_title(self, soup):
         # get title
-        html = soup.findAll("h1",
+        html = soup.find_all("h1",
                             {"class": ["title_lg", "title_md", "title_sm"]})[0]
         if not html.find("a"):
             raise ParseError
@@ -126,9 +139,9 @@ class HowTo:
         if not intro_html:
             raise ParseError
         else:
-            super = intro_html.find("sup")
-            if super != None:
-                for sup in intro_html.findAll("sup"):
+            sup = intro_html.find("sup")
+            if sup:
+                for sup in intro_html.find_all("sup"):
                     sup.decompose()
                     intro = intro_html.text
                     self._intro = intro.strip()
@@ -138,35 +151,41 @@ class HowTo:
 
     def _parse_steps(self, soup):
         self._steps = []
-        step_html = soup.findAll("div", {"class": "step"})
-        count = 0
-        for html in step_html:
-            # This finds and cleans weird tags from the step data
-            super = html.find("sup")
-            script = html.find("script")
-            if script != None:
-                for script in html.findAll("script"):
-                    script.decompose()
-            if super != None:
-                for sup in html.findAll("sup"):
-                    sup.decompose()
-            count += 1
-            summary = html.find("b").text
+        stickys = soup.find_all("div", re.compile("section steps.*sticky"))
+        for sticky in stickys:
+            stick_title = sticky.find("span", {"class": "mw-headline"})
+            stick_name = sticky.find("div", {"class": "altblock"})
+            if not stick_name:
+                stick_name = ''
+            else:
+                stick_name = stick_name.text.strip()
+            step_html = sticky.find_all("div", {"class": "step"})
+            for (html_count, html) in enumerate(step_html):
+                # This finds and cleans weird tags from the step data
+                if html.script:
+                    for script in html.find_all("script"):
+                        script.decompose()
+                if html.sup:
+                    for sup in html.find_all("sup"):
+                        sup.decompose()
+                summary = html.find("b").text
 
-            for _extra_div in html.find("b").find_all("div"):
-                summary = summary.replace(_extra_div.text, "")
+                for _extra_div in html.find("b").find_all("div"):
+                    summary = summary.replace(_extra_div.text, "")
 
-            step = HowToStep(count, summary)
-            ex_step = html
-            for b in ex_step.findAll("b"):
-                b.decompose()
-            step._description = ex_step.text.strip()
-            self._steps.append(step)
+                step = HowToStep(html_count, summary, part=stick_name)
+                ex_step = html
+                for b in ex_step.find_all("b"):
+                    b.decompose()
+                step._description = ex_step.text.strip()
+                if stick_name:
+                    step._title = stick_title.text.strip()
+                self._steps.append(step)
 
     def _parse_pictures(self, soup):
         # get step pic
         count = 0
-        for html in soup.findAll("a", {"class": "image"}):
+        for html in soup.find_all("a", {"class": "image"}):
             # one more ugly blob, nice :D
             html = html.find("img")
             i = str(html).find("data-src=")
@@ -237,7 +256,7 @@ class WikiHow:
         search_url = WikiHow.lang2url[lang] + \
                      "wikiHowTo?search=" + search_term.replace(" ", "+")
         html = get_html(search_url)
-        soup = bs4.BeautifulSoup(html, 'html.parser').findAll('a', attrs={
+        soup = bs4.BeautifulSoup(html, 'html.parser').find_all('a', attrs={
             'class': "result_link"})
         count = 1
         for link in soup:
@@ -260,13 +279,14 @@ def search_wikihow(query, max_results=10, lang="en"):
 
 
 if __name__ == "__main__":
-    how = RandomHowTo("it")
-    how.print()
+    how = HowTo('https://pt.wikihow.com/Contar-C%C3%A9lulas-no-Google-Planilhas-no-Windows-ou-Mac', lazy=False)
+    # how = RandomHowTo("it")
+    # how.print()
 
-    for how_to in WikiHow.search("comprar bitcoin", lang="pt"):
-        how_to.print()
-        break
+    # for how_to in WikiHow.search("comprar bitcoin", lang="pt"):
+    #     how_to.print()
+    #     break
 
-    for how_to in WikiHow.search("buy bitcoin"):
-        how_to.print()
-        break
+    # for how_to in WikiHow.search("buy bitcoin"):
+    #     how_to.print()
+    #     break

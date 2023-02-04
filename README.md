@@ -70,9 +70,14 @@ data = first_step.as_dict()
 how_to.print(extended=True)
 
 ```
+Some articles have their topics subdivided into internal parts. The parent part of each step is kept on the field `part` of the step.
+
+```python
+print(first_step.part)
+```
 
 ### ToDo
 
-- Many WikiHow articles also contain "Parts" which break down further into sub-steps. Write a function to parse these additional divisions.
+
 - Add parser for tips
 - Add parser for warnings
