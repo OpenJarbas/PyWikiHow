@@ -17,12 +17,13 @@ def get_html(url):
 
 
 class HowToStep:
-    def __init__(self, number, summary=None, description=None, picture=None, part=None):
+    def __init__(self, number, summary=None, description=None, picture=None, part=None, title=None):
         self._number = number
         self._summary = summary
         self._description = description
         self._picture = picture
         self._part = part
+        self._title = title
 
     @property
     def number(self):
@@ -44,12 +45,17 @@ class HowToStep:
     def part(self):
         return self._part
 
+    @property
+    def title(self):
+        return self._title
+
     def as_dict(self):
         return {"number": self.number,
                 "summary": self.summary,
                 "description": self.description,
                 "picture": self.picture,
-                "part": self.part}
+                "part": self.part,
+                "title": self.title}
 
     def print(self, extended=False):
         print(self.number, "-", self.summary)
@@ -147,6 +153,7 @@ class HowTo:
         self._steps = []
         stickys = soup.find_all("div", re.compile("section steps.*sticky"))
         for sticky in stickys:
+            stick_title = sticky.find("span", {"class": "mw-headline"})
             stick_name = sticky.find("div", {"class": "altblock"}).text.strip()
             step_html = sticky.find_all("div", {"class": "step"})
             for (html_count, html) in enumerate(step_html):
@@ -167,6 +174,8 @@ class HowTo:
                 for b in ex_step.find_all("b"):
                     b.decompose()
                 step._description = ex_step.text.strip()
+                if stick_name:
+                    step._title = stick_title.text.strip()
                 self._steps.append(step)
 
     def _parse_pictures(self, soup):
