@@ -154,7 +154,11 @@ class HowTo:
         stickys = soup.find_all("div", re.compile("section steps.*sticky"))
         for sticky in stickys:
             stick_title = sticky.find("span", {"class": "mw-headline"})
-            stick_name = sticky.find("div", {"class": "altblock"}).text.strip()
+            stick_name = sticky.find("div", {"class": "altblock"})
+            if not stick_name:
+                stick_name = ''
+            else:
+                stick_name = stick_name.text.strip()
             step_html = sticky.find_all("div", {"class": "step"})
             for (html_count, html) in enumerate(step_html):
                 # This finds and cleans weird tags from the step data
@@ -275,14 +279,14 @@ def search_wikihow(query, max_results=10, lang="en"):
 
 
 if __name__ == "__main__":
-    how = HowTo('https://pt.wikihow.com/Fazer-Comida-Para-Cachorro', lazy=False)
-    how = RandomHowTo("it")
-    how.print()
+    how = HowTo('https://pt.wikihow.com/Contar-C%C3%A9lulas-no-Google-Planilhas-no-Windows-ou-Mac', lazy=False)
+    # how = RandomHowTo("it")
+    # how.print()
 
-    for how_to in WikiHow.search("comprar bitcoin", lang="pt"):
-        how_to.print()
-        break
+    # for how_to in WikiHow.search("comprar bitcoin", lang="pt"):
+    #     how_to.print()
+    #     break
 
-    for how_to in WikiHow.search("buy bitcoin"):
-        how_to.print()
-        break
+    # for how_to in WikiHow.search("buy bitcoin"):
+    #     how_to.print()
+    #     break
